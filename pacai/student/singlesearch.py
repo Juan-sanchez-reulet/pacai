@@ -28,7 +28,33 @@ def depth_first_search(
     """
 
     # *** Your Code Here ***
-    raise NotImplementedError('depth_first_search')
+    start = problem.get_starting_node()
+    frontier = [(start, [], 0.0)]
+    explored = set()
+
+    while frontier:
+        node, actions, cost = frontier.pop()
+
+        if node in explored:
+            continue
+
+        if problem.is_goal_node(node):
+            return pacai.core.search.SearchSolution(
+                actions, cost, node
+            )
+
+        explored.add(node)
+
+        for successor in problem.get_successor_nodes(node):
+            next_node = successor.node
+
+            if next_node not in explored:
+                new_actions = actions + [successor.action]
+                new_cost = cost + successor.cost
+
+                frontier.append((next_node, new_actions, new_cost))
+
+    raise pacai.core.search.SolutionNotFoundError()
 
 def breadth_first_search(
         problem: pacai.core.search.SearchProblem,
