@@ -6,6 +6,7 @@ import random
 import typing
 
 import pacai.agents.searchproblem
+import pacai.core.action
 import pacai.core.agent
 import pacai.core.agentaction
 import pacai.core.board
@@ -15,8 +16,7 @@ import pacai.pacman.board
 import pacai.search.common
 import pacai.search.food
 import pacai.search.position
-from collections import deque
-from pacai.util.containers import PriorityQueue
+import pacai.util.containers
 
 def depth_first_search(
         problem: pacai.core.search.SearchProblem,
@@ -31,10 +31,12 @@ def depth_first_search(
 
     # *** Your Code Here ***
     start = problem.get_starting_node()
-    frontier = [(start, [], 0.0)]
+    frontier: pacai.util.containers.Stack[tuple[pacai.core.search.SearchNode, list[pacai.core.action.Action], float]] = pacai.util.containers.Stack()
     explored = set()
 
-    while frontier:
+    frontier.push((start, [], 0.0))
+
+    while (not frontier.is_empty()):
         node, actions, cost = frontier.pop()
 
         if node in explored:
@@ -54,7 +56,7 @@ def depth_first_search(
                 new_actions = actions + [successor.action]
                 new_cost = cost + successor.cost
 
-                frontier.append((next_node, new_actions, new_cost))
+                frontier.push((next_node, new_actions, new_cost))
 
     raise pacai.core.search.SolutionNotFoundError()
 
@@ -72,11 +74,13 @@ def breadth_first_search(
     # *** Your Code Here ***
 
     start = problem.get_starting_node()
-    frontier = deque([(start, [], 0.0)])
+    frontier: pacai.util.containers.Queue[tuple[pacai.core.search.SearchNode, list[pacai.core.action.Action], float]] = pacai.util.containers.Queue()
     explored = set()
 
-    while frontier:
-        node, actions, cost = frontier.popleft()
+    frontier.push((start, [], 0.0))
+
+    while (not frontier.is_empty()):
+        node, actions, cost = frontier.pop()
 
         if node in explored:
             continue
@@ -95,7 +99,7 @@ def breadth_first_search(
                 new_actions = actions + [successor.action]
                 new_cost = cost + successor.cost
 
-                frontier.append((next_node, new_actions, new_cost))
+                frontier.push((next_node, new_actions, new_cost))
 
     raise pacai.core.search.SolutionNotFoundError()
 
@@ -113,7 +117,9 @@ def uniform_cost_search(
     # *** Your Code Here ***
     start = problem.get_starting_node()
 
-    frontier = PriorityQueue()
+    frontier: pacai.util.containers.PriorityQueue[
+        tuple[pacai.core.search.SearchNode, list[pacai.core.action.Action], float]
+    ] = pacai.util.containers.PriorityQueue()
     explored = set()
 
     frontier.push((start, [], 0.0), 0.0)
@@ -160,7 +166,9 @@ def astar_search(
     # *** Your Code Here ***
     start = problem.get_starting_node()
 
-    frontier = PriorityQueue()
+    frontier: pacai.util.containers.PriorityQueue[
+        tuple[pacai.core.search.SearchNode, list[pacai.core.action.Action], float]
+    ] = pacai.util.containers.PriorityQueue()
     explored = set()
 
     frontier.push((start, [], 0.0), heuristic(start, problem))
@@ -186,7 +194,7 @@ def astar_search(
                 priority = new_cost + heuristic(next_node, problem)
 
                 frontier.push(
-                    (next_node, new_actions, new_cost),priority)
+                    (next_node, new_actions, new_cost), priority)
 
     raise pacai.core.search.SolutionNotFoundError()
 
@@ -196,12 +204,30 @@ class CornersSearchNode(pacai.core.search.SearchNode):
 
     You get to implement this search node however you want.
     """
+    def __init__(self,
+            position: pacai.core.board.Position,
+            visited_corners: typing.Iterable[pacai.core.board.Position] | None = None,
+            ) -> None:
+        self.position: pacai.core.board.Position = position
+        self.visited_corners: frozenset[pacai.core.board.Position] = frozenset(
+            visited_corners if visited_corners is not None else ())
 
-    def __init__(self) -> None:
-        """ Construct a search node to help search for corners. """
+    def __eq__(self, other: object) -> bool:
+        if (not isinstance(other, CornersSearchNode)):
+            return False
 
-        # *** Your Code Here ***
-        # Remember that you can also add argument to your constructor.
+        return ((self.position == other.position)
+                and (self.visited_corners == other.visited_corners))
+
+    def __hash__(self) -> int:
+        return hash((self.position, self.visited_corners))
+
+    def __lt__(self, other: object) -> bool:
+        if (not isinstance(other, CornersSearchNode)):
+            return False
+
+        return ((self.position, tuple(sorted(self.visited_corners)))
+                < (other.position, tuple(sorted(other.visited_corners))))
 
 class CornersSearchProblem(pacai.core.search.SearchProblem[CornersSearchNode]):
     """
@@ -215,25 +241,54 @@ class CornersSearchProblem(pacai.core.search.SearchProblem[CornersSearchNode]):
      - (8, 1) -- South-West / Lower Left
      - (8, 8) -- South-East / Lower Right
     """
-
     def __init__(self,
             game_state: pacai.core.gamestate.GameState,
             **kwargs: typing.Any) -> None:
         super().__init__(**kwargs)
 
-        # *** Your Code Here ***
+        self.board: pacai.core.board.Board = game_state.board
+        start_position = game_state.get_agent_position()
+
+        if start_position is None:
+            raise ValueError("Could not find starting position.")
+
+        self.start_position: pacai.core.board.Position = start_position
+        self.corners: frozenset[pacai.core.board.Position] = frozenset(
+            self.board.get_corners(offset=1))
 
     def get_starting_node(self) -> CornersSearchNode:
         # *** Your Code Here ***
-        raise NotImplementedError('CornersSearchProblem.get_starting_node')
+        visited: frozenset[pacai.core.board.Position] = frozenset()
+
+        if self.start_position in self.corners:
+            visited = frozenset({self.start_position})
+
+        return CornersSearchNode(self.start_position, visited)
 
     def is_goal_node(self, node: CornersSearchNode) -> bool:
         # *** Your Code Here ***
-        raise NotImplementedError('CornersSearchProblem.is_goal_node')
+        return node.visited_corners == self.corners
 
     def get_successor_nodes(self, node: CornersSearchNode) -> list[pacai.core.search.SuccessorInfo]:
-        # *** Your Code Here ***
-        raise NotImplementedError('CornersSearchProblem.get_successor_nodes')
+        successors = []
+
+        for action, next_position in self.board.get_neighbors(node.position):
+            visited = node.visited_corners
+
+            if next_position in self.corners:
+                visited = visited | {next_position}
+
+            next_node = CornersSearchNode(next_position, visited)
+
+            successors.append(pacai.core.search.SuccessorInfo(next_node, action, 1.0))
+
+        self.expanded_node_count += 1
+
+        if node not in self.visited_nodes:
+            self.position_history.append(node.position)
+            self.visited_nodes.add(node)
+
+        return successors
 
 def corners_heuristic(node: CornersSearchNode, problem: CornersSearchProblem, **kwargs: typing.Any) -> float:
     """
