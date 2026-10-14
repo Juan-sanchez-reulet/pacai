@@ -326,8 +326,57 @@ def food_heuristic(node: pacai.search.food.FoodSearchNode, problem: pacai.search
     A heuristic for the FoodSearchProblem.
     """
 
-    # *** Your Code Here ***
-    return pacai.search.common.null_heuristic(node, problem)  # Default to a trivial solution.
+    food = set(node.remaining_food)
+
+    if not food:
+        return 0.0
+
+    def manhattan(a, b):
+        return abs(a.row - b.row) + abs(a.col - b.col)
+
+    # Part 1: Find the nearest food using real maze distances.
+    board = problem.state.board
+
+    frontier = pacai.util.containers.Queue()
+    frontier.push((node.position, 0))
+    visited = {node.position}
+
+    closest_distance = float('inf')
+
+    while not frontier.is_empty():
+        position, distance = frontier.pop()
+
+        if position in food:
+            closest_distance = distance
+            break
+
+        for action, neighbor in board.get_neighbors(position):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                frontier.push((neighbor, distance + 1))
+
+    # Part 2: Prim's MST using Manhattan distances.
+    remaining = food.copy()
+    connected = {remaining.pop()}
+    mst_cost = 0.0
+
+    while remaining:
+        best_distance = float('inf')
+        best_food = None
+
+        for source in connected:
+            for target in remaining:
+                distance = manhattan(source, target)
+
+                if distance < best_distance:
+                    best_distance = distance
+                    best_food = target
+
+        mst_cost += best_distance
+        connected.add(best_food)
+        remaining.remove(best_food)
+
+    return closest_distance + mst_cost
 
 class ClosestDotSearchAgent(pacai.agents.searchproblem.GreedySubproblemSearchAgent):
     """
@@ -352,7 +401,8 @@ class ClosestDotSearchAgent(pacai.agents.searchproblem.GreedySubproblemSearchAge
     and you can pass whatever you want to the parent's `__init__()`.
     """
 
-    # *** Your Code Here ***
+    def __init__(self, **kwargs: typing.Any) -> None:
+        super().__init__(problem=AnyMarkerSearchProblem,solver=breadth_first_search,**kwargs)
 
 class AnyMarkerSearchProblem(pacai.search.position.PositionSearchProblem):
     """
@@ -369,11 +419,11 @@ class AnyMarkerSearchProblem(pacai.search.position.PositionSearchProblem):
             **kwargs: typing.Any) -> None:
         super().__init__(game_state, **kwargs)
 
-        # *** Your Code Here ***
+        self.target_marker = target_marker
 
     def is_goal_node(self, node: pacai.search.position.PositionSearchNode) -> bool:
-        # *** Your Code Here ***
-        raise NotImplementedError('CornersSearchProblem.is_goal_node')
+        
+        return node.position in self.board.get_marker_positions(self.target_marker)
 
 class ApproximateSearchAgent(pacai.core.agent.Agent):
     """
