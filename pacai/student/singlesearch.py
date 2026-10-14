@@ -402,7 +402,7 @@ class ClosestDotSearchAgent(pacai.agents.searchproblem.GreedySubproblemSearchAge
     """
 
     def __init__(self, **kwargs: typing.Any) -> None:
-        super().__init__(problem=AnyMarkerSearchProblem,solver=breadth_first_search,**kwargs)
+        super().__init__(problem=AnyMarkerSearchProblem, solver=breadth_first_search, **kwargs)
 
 class AnyMarkerSearchProblem(pacai.search.position.PositionSearchProblem):
     """
