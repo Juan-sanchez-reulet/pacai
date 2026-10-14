@@ -17,6 +17,7 @@ import pacai.search.common
 import pacai.search.food
 import pacai.search.position
 import pacai.util.containers
+from itertools import permutations
 
 def depth_first_search(
         problem: pacai.core.search.SearchProblem,
@@ -300,8 +301,25 @@ def corners_heuristic(node: CornersSearchNode, problem: CornersSearchProblem, **
     (You need not worry about consistency for this heuristic to receive full credit.)
     """
 
-    # *** Your Code Here ***
-    return pacai.search.common.null_heuristic(node, problem)  # Default to a trivial solution.
+    remaining = problem.corners - node.visited_corners
+
+    if not remaining:
+        return 0.0
+
+    best = float('inf')
+
+    for order in permutations(remaining):
+        current = node.position
+        total = 0.0
+
+        for corner in order:
+            total += (abs(current.row - corner.row) + abs(current.col - corner.col))
+            current = corner
+
+        best = min(best, total)
+
+    return best
+
 
 def food_heuristic(node: pacai.search.food.FoodSearchNode, problem: pacai.search.food.FoodSearchProblem, **kwargs: typing.Any) -> float:
     """
