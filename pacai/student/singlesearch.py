@@ -430,3 +430,20 @@ class ApproximateSearchAgent(pacai.core.agent.Agent):
     A search agent that tries to perform an approximate search instead of an exact one.
     In other words, this agent is okay with a solution that is "good enough" and not necessarily optimal.
     """
+    def __init__(self, **kwargs: typing.Any) -> None:
+        super().__init__(**kwargs)
+        self._delegate = ClosestDotSearchAgent(**kwargs)
+
+    def game_start_full(
+            self,
+            agent_index: int,
+            suggested_seed: int,
+            initial_state: pacai.core.gamestate.GameState,
+            ) -> pacai.core.agentaction.AgentAction:
+        super().game_start_full(agent_index, suggested_seed, initial_state)
+
+        return self._delegate.game_start_full(agent_index, suggested_seed, initial_state)
+
+    def get_action(self, state: pacai.core.gamestate.GameState) -> pacai.core.action.Action:
+
+        return self._delegate.get_action(state)
